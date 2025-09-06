@@ -1,0 +1,2 @@
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="UpdateExpenditureDetails.aspx.cs" Inherits="CERSWebApi.UpdateExpenditureDetails" %>
+<asp:literal runat="server" id="responseData"></asp:literal>
