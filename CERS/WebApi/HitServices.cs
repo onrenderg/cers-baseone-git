@@ -33,8 +33,8 @@ namespace CERS.WebApi
         /*    public string baseurl = "https://sechimachal.nic.in/cerswebapi/";
             public string PrivacyPolicyUrl = "https://sechimachal.nic.in/cerswebapi/privacypolicy.aspx?";*/
 
-        public  string baseurl = "http://10.146.2.8/CERSWebApi/";
-        public  string PrivacyPolicyUrl = "http://10.146.2.8/CERSWebApi/privacypolicy.aspx?";
+        public  string baseurl = "http://10.146.2.78/CERSWebApi/";
+        public  string PrivacyPolicyUrl = "http://10.146.2.78/CERSWebApi/privacypolicy.aspx?";
 
         /*  public async void AppVersion()
           {
@@ -183,30 +183,54 @@ namespace CERS.WebApi
 
         public async Task<string> GetToken()
         {
+            System.Diagnostics.Debug.WriteLine("[GetToken] Starting token generation...");
+            
             var current = Connectivity.NetworkAccess;
+            System.Diagnostics.Debug.WriteLine($"[GetToken] Network access: {current}");
+            
             if (current == NetworkAccess.Internet)
             {
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[GetToken] Creating HTTP client");
                     var client = new HttpClient();
-                    var byteArray = Encoding.ASCII.GetBytes(Preferences.Get("BasicAuth", "xx:xx"));
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+                    
+                    string basicAuth = Preferences.Get("BasicAuth", "xx:xx");
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] BasicAuth from preferences: {basicAuth}");
+                    
+                    // Try Xamarin approach first - use credentials directly without URL decoding
+                    var byteArray = Encoding.ASCII.GetBytes(basicAuth);
+                    string base64Auth = Convert.ToBase64String(byteArray);
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Base64 encoded auth (Xamarin style): {base64Auth}");
+                    
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64Auth);
                     string url = baseurl + $"api/GenerateToken";
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Token URL: {url}");
 
+                    System.Diagnostics.Debug.WriteLine("[GetToken] Making token request...");
                     HttpResponseMessage response = await client.GetAsync(url);
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Token response status: {response.StatusCode}");
 
                     var result = await response.Content.ReadAsStringAsync();
-                    var parsed = JObject.Parse(result);                
-                    return parsed["TokenID"]?.ToString() ?? "";
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Token response content: {result}");
+                    
+                    var parsed = JObject.Parse(result);
+                    string tokenId = parsed["TokenID"]?.ToString() ?? "";
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Extracted TokenID: {tokenId}");
+                    
+                    return tokenId;
                 }
                 catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Exception occurred: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[GetToken] Stack trace: {ex.StackTrace}");
                     await Application.Current.MainPage.DisplayAlert("Exception", "Something went wrong. Please try again!", "OK");
                     return "";
                 }
             }
             else
             {
+                System.Diagnostics.Debug.WriteLine("[GetToken] No internet connection");
                 await Application.Current.MainPage.DisplayAlert("CERS", App.NoInternet_, App.Btn_Close);
                 return "";
             }
@@ -214,47 +238,6 @@ namespace CERS.WebApi
   
         public async Task<int> userlogin_Get(string MobileNo)
         {
-            // Mock/Test mode - bypass network calls for testing
-            if (MobileNo == "9999999999" || MobileNo == "8888888888")
-            {
-                // Create mock user data for testing
-                userDetailsDatabase.DeleteUserDetails();
-                var mockUser = new UserDetails()
-                {
-                    AUTO_ID = "TEST123",
-                    EPIC_NO = "ABC1234567",
-                    VOTER_NAME = "Test User",
-                    RELATION_TYPE = "S/O",
-                    RELATIVE_NAME = "Test Father",
-                    GENDER = "M",
-                    AGE = "30",
-                    EMAIL_ID = "test@test.com",
-                    MOBILE_NUMBER = MobileNo,
-                    AgentName = MobileNo == "8888888888" ? "Agent Name" : "",
-                    AgentMobile = MobileNo == "8888888888" ? "9876543210" : "",
-                    Panchayat_Name = "Test Panchayat",
-                    LoggedInAs = MobileNo == "9999999999" ? "Self" : "Agent",
-                    OTPID = "TEST_OTP_ID",
-                    NominationForName = "Test Election",
-                    NominationForNameLocal = "टेस्ट चुनाव",
-                    PollDate = "01/01/2025",
-                    NominationDate = "15/12/2024",
-                    IsLoggedIn = "N",
-                    postcode = "123456",
-                    LimitAmt = "500000",
-                    ResultDate = "05/01/2025",
-                    Resultdatethirtydays = "04/02/2025",
-                    Block_Code = "001",
-                    panwardcouncilname = "Test Ward",
-                    panwardcouncilnamelocal = "टेस्ट वार्ड",
-                    ExpStatus = "Active",
-                    expStartDate = "01/12/2024",
-                    expEndDate = "31/01/2025"
-                };
-                userDetailsDatabase.AddUserDetails(mockUser);
-                return 200; // Success
-            }
-
             var current = Connectivity.NetworkAccess;
             if (current == NetworkAccess.Internet)
             {
@@ -345,23 +328,6 @@ namespace CERS.WebApi
 
         public async Task<int> observorlogin_Get(string MobileNo)
         {
-            // Mock/Test mode - bypass network calls for testing
-            if (MobileNo == "7777777777")
-            {
-                // Create mock observer data for testing
-                observorLoginDetailsDatabase.DeleteObservorLoginDetails();
-                var mockObserver = new ObservorLoginDetails()
-                {
-                    Auto_ID = "OBS123",
-                    ObserverName = "Test Observer",
-                    ObserverContact = MobileNo,
-                    ObserverDesignation = "Election Observer",
-                    Pritype = "General"
-                };
-                observorLoginDetailsDatabase.AddObservorLoginDetails(mockObserver);
-                return 200; // Success
-            }
-
             var current = Connectivity.NetworkAccess;
             if (current == NetworkAccess.Internet)
             {
@@ -423,67 +389,97 @@ namespace CERS.WebApi
 
         public async Task<int> GetOtp(string MobileNo)
         {
-            // Mock/Test mode - bypass network calls for testing
-            if (MobileNo == "9999999999" || MobileNo == "8888888888" || MobileNo == "7777777777")
-            {
-                // Mock OTP generation - always return success for test numbers
-                return 200; // Success
-            }
-
+            System.Diagnostics.Debug.WriteLine($"[GetOtp] Starting with mobile: {MobileNo}");
+            
             var current = Connectivity.NetworkAccess;
+            System.Diagnostics.Debug.WriteLine($"[GetOtp] Network access: {current}");
+            
             if (current == NetworkAccess.Internet)
             {
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[GetOtp] Creating HTTP client");
                     var client = new HttpClient();
 
-                    //var byteArray = Encoding.ASCII.GetBytes(App.basic_auth());
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await GetToken());
-                    string url = baseurl + $"api/GetOTP?" +
-                          $"MobileNo={WebUtility.UrlEncode(AESCryptography.EncryptAES(MobileNo))}";
+                    System.Diagnostics.Debug.WriteLine("[GetOtp] Getting Bearer token...");
+                    string token = await GetToken();
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Bearer token obtained: {token?.Substring(0, Math.Min(10, token?.Length ?? 0))}...");
+                    
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                    
+                    System.Diagnostics.Debug.WriteLine("[GetOtp] Encrypting mobile number...");
+                    string encryptedMobile = AESCryptography.EncryptAES(MobileNo);
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Encrypted mobile: {encryptedMobile}");
+                    
+                    string urlEncodedMobile = WebUtility.UrlEncode(encryptedMobile);
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] URL encoded mobile: {urlEncodedMobile}");
+                    
+                    string url = baseurl + $"api/GetOTP?MobileNo={urlEncodedMobile}";
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] API URL: {url}");
+                    
+                    System.Diagnostics.Debug.WriteLine("[GetOtp] Making API request...");
                     HttpResponseMessage response = await client.GetAsync(url);
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Response status: {response.StatusCode}");
 
                     var result = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Response content: {result}");
+                    
                     var parsed = JObject.Parse(result);
 
                     if ((int)response.StatusCode == 200)
                     {
+                        System.Diagnostics.Debug.WriteLine("[GetOtp] Processing successful response...");
                         foreach (var pair in parsed)
                         {
                             if (pair.Key == "data")
                             {
+                                System.Diagnostics.Debug.WriteLine("[GetOtp] Found data section in response");
                                 var nodes = pair.Value;
                                 foreach (var node in nodes)
                                 {
                                     var item = new UserDetails();
-                                    item.OTPID = AESCryptography.DecryptAES(node["OTPID"].ToString());
-                                    if (Preferences.Get("UserType", "").Equals("Observor"))
+                                    string encryptedOtpId = node["OTPID"].ToString();
+                                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Encrypted OTPID from API: {encryptedOtpId}");
+                                    
+                                    item.OTPID = AESCryptography.DecryptAES(encryptedOtpId);
+                                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Decrypted OTPID: {item.OTPID}");
+                                    
+                                    string userType = Preferences.Get("UserType", "");
+                                    System.Diagnostics.Debug.WriteLine($"[GetOtp] User type: {userType}");
+                                    
+                                    if (userType.Equals("Observor"))
                                     {
+                                        System.Diagnostics.Debug.WriteLine("[GetOtp] Updating observer database");
                                         observorLoginDetailsDatabase.UpdateCustomquery($"update observorLoginDetails set OTPID ='{item.OTPID}'");
                                     }
                                     else
                                     {
+                                        System.Diagnostics.Debug.WriteLine("[GetOtp] Updating user database");
                                         userDetailsDatabase.UpdateCustomquery($"update userDetails set OTPID ='{item.OTPID}'");
                                     }
-
                                 }
                             }
                         }
+                        System.Diagnostics.Debug.WriteLine("[GetOtp] Successfully completed OTP request");
                     }
                     else
                     {
+                        System.Diagnostics.Debug.WriteLine($"[GetOtp] API returned error: {parsed["Message"]}");
                         await Application.Current.MainPage.DisplayAlert("CERS", parsed["Message"].ToString(), App.Btn_Close);
                     }
                     return (int)response.StatusCode;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Exception occurred: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[GetOtp] Stack trace: {ex.StackTrace}");
                     await Application.Current.MainPage.DisplayAlert("Exception", "Something went wrong. Please try again!", "OK");
                     return 500;
                 }
             }
             else
             {
+                System.Diagnostics.Debug.WriteLine("[GetOtp] No internet connection");
                 await Application.Current.MainPage.DisplayAlert("CERS", App.NoInternet_, App.Btn_Close);
                 return 101;
             }
@@ -491,52 +487,79 @@ namespace CERS.WebApi
 
         public async Task<int> checkotp_Get(string MobileNo, string UserOtp)
         {
-            // Mock/Test mode - bypass network calls for testing
-            if (MobileNo == "9999999999" || MobileNo == "8888888888" || MobileNo == "7777777777")
+            System.Diagnostics.Debug.WriteLine($"[CheckOtp] Starting OTP verification for mobile: {MobileNo}");
+            System.Diagnostics.Debug.WriteLine($"[CheckOtp] User entered OTP: {UserOtp}");
+            
+            var current = Connectivity.NetworkAccess;
+            System.Diagnostics.Debug.WriteLine($"[CheckOtp] Network access: {current}");
+            
+            if (current == NetworkAccess.Internet)
             {
-                // Mock OTP verification - accept any 6-digit OTP for test numbers
-                if (UserOtp.Length == 6 && UserOtp.All(char.IsDigit))
+                List<ObservorLoginDetails> observorLoginDetailslist;
+                string otpId;
+                string userType = Preferences.Get("UserType", "");
+                System.Diagnostics.Debug.WriteLine($"[CheckOtp] User type: {userType}");
+                
+                if (userType.Equals("Observor"))
                 {
-                    return 200; // Success - OTP verified
+                    observorLoginDetailslist = observorLoginDetailsDatabase.GetObservorLoginDetails("Select * from ObservorLoginDetails").ToList();
+                    otpId = observorLoginDetailslist.ElementAt(0).OTPID;
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Retrieved Observer OTPID: {otpId}");
                 }
                 else
                 {
-                    return 400; // Invalid OTP format
+                    userDetailslist = userDetailsDatabase.GetUserDetails("Select * from UserDetails").ToList();
+                    otpId = userDetailslist.ElementAt(0).OTPID;
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Retrieved User OTPID: {otpId}");
                 }
-            }
-
-            var current = Connectivity.NetworkAccess;
-            if (current == NetworkAccess.Internet)
-            {
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[CheckOtp] Creating HTTP client");
                     var client = new HttpClient();
-                    string otpId = "";
-                    if (userDetailsDatabase.GetUserDetails("Select * from UserDetails").Any())
-                    {
-                        otpId = userDetailsDatabase.GetUserDetails("Select * from UserDetails").ElementAt(0).OTPID;
-                    }
 
-                    //var byteArray = Encoding.ASCII.GetBytes(App.basic_auth());
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await GetToken());
+                    System.Diagnostics.Debug.WriteLine("[CheckOtp] Getting Bearer token...");
+                    string token = await GetToken();
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                    
+                    System.Diagnostics.Debug.WriteLine("[CheckOtp] Encrypting parameters...");
+                    string encryptedMobile = AESCryptography.EncryptAES(MobileNo);
+                    string encryptedUserOtp = AESCryptography.EncryptAES(UserOtp);
+                    string encryptedOtpId = AESCryptography.EncryptAES(otpId);
+                    
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Encrypted mobile: {encryptedMobile}");
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Encrypted user OTP: {encryptedUserOtp}");
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Encrypted OTPID: {encryptedOtpId}");
+                    
                     string url = baseurl + $"api/CheckOtp?" +
-                          $"MobileNo={WebUtility.UrlEncode(AESCryptography.EncryptAES(MobileNo))}" +
-                          $"&UserOtp={WebUtility.UrlEncode(AESCryptography.EncryptAES(UserOtp))}" +
-                          $"&otpId={WebUtility.UrlEncode(AESCryptography.EncryptAES(otpId))}";
+                          $"MobileNo={WebUtility.UrlEncode(encryptedMobile)}" +
+                          $"&UserOtp={WebUtility.UrlEncode(encryptedUserOtp)}" +
+                          $"&otpId={WebUtility.UrlEncode(encryptedOtpId)}";
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] API URL: {url}");
+                    
+                    System.Diagnostics.Debug.WriteLine("[CheckOtp] Making OTP verification request...");
                     HttpResponseMessage response = await client.GetAsync(url);
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Response status: {response.StatusCode}");
 
                     var result = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Response content: {result}");
+                    
                     var parsed = JObject.Parse(result);
-                    return (int)response.StatusCode;
+                    int statusCode = (int)response.StatusCode;
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Returning status code: {statusCode}");
+                    
+                    return statusCode;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Exception occurred: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[CheckOtp] Stack trace: {ex.StackTrace}");
                     await Application.Current.MainPage.DisplayAlert("Exception", "Something went wrong. Please try again!", "OK");
                     return 500;
                 }
             }
             else
             {
+                System.Diagnostics.Debug.WriteLine("[CheckOtp] No internet connection");
                 await App.Current.MainPage.DisplayAlert("CERS", App.NoInternet_, App.Btn_Close);
                 return 101;
             }
@@ -926,20 +949,6 @@ namespace CERS.WebApi
 
         public async Task<int> CheckUserType_Get(string MobileNo)
         {
-            // Mock/Test mode - bypass network calls for testing
-            if (MobileNo == "9999999999" || MobileNo == "8888888888" || MobileNo == "7777777777")
-            {
-                // Mock response for test numbers
-                if (MobileNo == "9999999999")
-                    Preferences.Set("UserType", "Candidate");
-                else if (MobileNo == "8888888888") 
-                    Preferences.Set("UserType", "Agent");
-                else if (MobileNo == "7777777777")
-                    Preferences.Set("UserType", "Observor");
-                
-                return 200; // Success
-            }
-
             var current = Connectivity.NetworkAccess;
             if (current == NetworkAccess.Internet)
             {

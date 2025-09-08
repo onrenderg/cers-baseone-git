@@ -31,7 +31,8 @@ namespace CERS
         public App()
         {
             InitializeComponent();
-            
+
+            System.Diagnostics.Debug.WriteLine(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
             // Initialize database instances after MAUI has started
             userDetailsDatabase = new UserDetailsDatabase();
             savePreferenceDatabase = new SavePreferenceDatabase();
@@ -246,7 +247,7 @@ namespace CERS
             var current = Connectivity.NetworkAccess;
             if (current == NetworkAccess.Internet)
             {
-                service.AppVersion();
+                // service.AppVersion(); // Temporarily disabled - causing startup crashes
             }
         }
 

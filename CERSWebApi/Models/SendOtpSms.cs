@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
@@ -26,11 +26,11 @@ namespace CERSWebApi.Models
                 username = ConfigurationManager.AppSettings["senderUserNameDit"];
                 password = ConfigurationManager.AppSettings["senderUserPasswordDit"];
                 senderid = ConfigurationManager.AppSettings["senderIDDit"];
-                /*isLocalorLive = ConfigurationManager.AppSettings["isLocalorLive"];
+                isLocalorLive = ConfigurationManager.AppSettings["isLocalorLive"];
                 if (isLocalorLive.Contains("Local"))
                 {
-                    return Status;
-                }*/
+                    return "SMS bypassed for local development";
+                }
 
 
                 Stream dataStream;

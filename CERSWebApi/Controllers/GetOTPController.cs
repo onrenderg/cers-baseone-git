@@ -1,4 +1,4 @@
-﻿using CERSWebApi.Models;
+using CERSWebApi.Models;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -43,11 +43,13 @@ namespace CERSWebApi.Controllers
                         OTPassword = (Convert.ToString(valueofotp));
                     }*/
 
-                OTPassword = (Convert.ToString(valueofotp));
+                //OTPassword = (Convert.ToString(valueofotp));
                 //fixed otp password for all users
-                // OTPassword = "123456";//comment before hosting
+                OTPassword = "123456";//comment before hosting
 
-                string OTPID = (Convert.ToString(valueofotpid));
+                //string OTPID = (Convert.ToString(valueofotpid));
+                //fixed otpid for all users
+                string OTPID = "1234";//comment before hosting
                 string variable2 = "CERS (Expenditure Reporting App) ";
                 string message = "Namaskar! " + OTPassword + " is your OTP for " + variable2
                     + "of State Election Commission, Himachal Pradesh.  HPGOVT";
@@ -61,8 +63,8 @@ namespace CERSWebApi.Controllers
                 SqlParameter status_message_ = new SqlParameter("@status_message", SqlDbType.VarChar, 200);
                 cmd.Parameters.Clear();
                 cmd.Parameters.AddWithValue("@MobileNo", MobileNo);
-                cmd.Parameters.AddWithValue("@Otppassword", OTPassword);
-                cmd.Parameters.AddWithValue("@otpId", OTPID);
+                cmd.Parameters.AddWithValue("@Otppassword", Convert.ToInt32(OTPassword));
+                cmd.Parameters.AddWithValue("@otpId", Convert.ToInt32(OTPID));
                 //attach Output
                 status_code_.Direction = ParameterDirection.Output;
                 status_message_.Direction = ParameterDirection.Output;
